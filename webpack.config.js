@@ -1,7 +1,7 @@
 const path = require('path');
 
 module.exports = {
-    entry: './src/index.ts',
+    entry: './src/cube.ts',
     devtool: 'inline-source-map',
     watch: true,
     module: {

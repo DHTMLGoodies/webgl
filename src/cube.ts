@@ -1,3 +1,4 @@
+import { mat4 } from "lib/gl-matrix";
 
 
 class App {
@@ -27,7 +28,6 @@ class App {
     private setClearColor() {
         // setting clear color - does not update screen immediately.
         this.gl.clearColor(.75, .85, .8, 1);
-
     }
 
     private clearScreen() {
@@ -86,6 +86,7 @@ class App {
         const positionAttributeLocation = this.gl.getAttribLocation(this.program, "vertPosition");
         const colorAttributeLocation = this.gl.getAttribLocation(this.program, "vertColor");
 
+        // Set pointer for position attributes
         this.gl.vertexAttribPointer(
             positionAttributeLocation, // attribute location
             2, // number of elements in each attribute,
@@ -95,12 +96,13 @@ class App {
             0 // offset from start
         );
 
+        // set pointer for color attributes
         this.gl.vertexAttribPointer(
             colorAttributeLocation, // attribute location
             3, // number of elements in each attribute,
             this.gl.FLOAT, // attribute type
             false, // normalized
-            5 * Float32Array.BYTES_PER_ELEMENT, // size of individual vertex
+            5 * Float32Array.BYTES_PER_ELEMENT, // total size of attribute
             2 * Float32Array.BYTES_PER_ELEMENT // offset from start
         );
 
