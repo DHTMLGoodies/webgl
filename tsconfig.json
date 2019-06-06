@@ -8,9 +8,10 @@
         "jsx": "react",
         "allowJs": true,
         "baseUrl": ".",
+        "types": ["gl-matrix"],
         "paths": {
             "*": [
-                "./typings/*"
+                "gl-matrix", "typings/gl-matrix/gl-matrix.d.ts" // mapping "gl-matrix" module to d.ts
             ]
         }
     }

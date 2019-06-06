@@ -1,5 +1,4 @@
-import { mat4 } from "lib/gl-matrix";
-
+import { mat4, glMatrix } from "gl-matrix";
 
 class App {
     private canvas: HTMLCanvasElement;
@@ -71,12 +70,15 @@ class App {
         }
     }
 
+    private worldMatrix: Float32Array;
+    private worldAttributeLocation: WebGLUniformLocation;
+
     private createBuffer() {
         const triangleVertices: number[] = [ // counter clockwise vertices
-            // x,y, R, G, B
-            0, .5, 1, 0, 0,
-            - .5, -.5, 0, 1, 0,
-            .5, -.5, 0, 0, 1
+            // x,y,z R, G, B
+            0.0, 0.5, 0.0, 1.0, 0.0, 0.0,
+            -0.5, -0.5, 0.0, 0.0, 1.0, 0.0,
+            0.5, -0.5, 0.0, 0.0, 0.0, 1.0
         ];
         const triangleVertexBuffer = this.gl.createBuffer();
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, triangleVertexBuffer);
@@ -89,10 +91,10 @@ class App {
         // Set pointer for position attributes
         this.gl.vertexAttribPointer(
             positionAttributeLocation, // attribute location
-            2, // number of elements in each attribute,
+            3, // number of elements in each attribute,
             this.gl.FLOAT, // attribute type
             false, // normalized
-            5 * Float32Array.BYTES_PER_ELEMENT, // size of individual vertex
+            6 * Float32Array.BYTES_PER_ELEMENT, // size of individual vertex
             0 // offset from start
         );
 
@@ -102,13 +104,36 @@ class App {
             3, // number of elements in each attribute,
             this.gl.FLOAT, // attribute type
             false, // normalized
-            5 * Float32Array.BYTES_PER_ELEMENT, // total size of attribute
-            2 * Float32Array.BYTES_PER_ELEMENT // offset from start
+            6 * Float32Array.BYTES_PER_ELEMENT, // total size of attribute
+            3 * Float32Array.BYTES_PER_ELEMENT // offset from start
         );
 
 
         this.gl.enableVertexAttribArray(positionAttributeLocation);
         this.gl.enableVertexAttribArray(colorAttributeLocation);
+
+        this.gl.useProgram(this.program);
+
+        const matWorldLocation = this.worldAttributeLocation = this.gl.getUniformLocation(this.program, "matrixWorld");
+        const matViewLocation = this.gl.getUniformLocation(this.program, "matrixView");
+        const matProjectionLocation = this.gl.getUniformLocation(this.program, "matrixProjection");
+
+        var worldMatrix = this.worldMatrix = new Float32Array(16);
+        var viewMatrix = new Float32Array(16);
+        var projectionMatrix = new Float32Array(16);
+
+        mat4.identity(worldMatrix);
+        // mat4.identity(viewMatrix);
+        mat4.lookAt(viewMatrix, [0, 0, -2], [0, 0, 0], [0, 1, 0]);
+        mat4.perspective(projectionMatrix, glMatrix.toRadian(45), 800 / 600, 0.1, 1000.1);
+
+
+
+        this.gl.uniformMatrix4fv(matWorldLocation, false, worldMatrix);
+        this.gl.uniformMatrix4fv(matViewLocation, false, viewMatrix);
+        this.gl.uniformMatrix4fv(matProjectionLocation, false, projectionMatrix);
+
+
     }
 
     private running: boolean = true;
@@ -118,11 +143,19 @@ class App {
     }
 
     private mainRenderLoop() {
+        var angle = 0;
+        const identityMatrix = new Float32Array(16);
+        mat4.identity(identityMatrix);
+
         const loop = () => {
 
+            angle = Date.now() / 1000 / 6 * 2 * Math.PI;
+
+            mat4.rotate(this.worldMatrix, identityMatrix, angle, [0, 1, 0]);
+            this.gl.uniformMatrix4fv(this.worldAttributeLocation, false, this.worldMatrix);
+            
             this.clearScreen();
 
-            this.gl.useProgram(this.program);
             this.gl.drawArrays(this.gl.TRIANGLES, 0, 3);
 
             if (this.running) {
@@ -137,9 +170,14 @@ class App {
         return `
         precision mediump float;
 
-        // input
-        attribute vec2 vertPosition;
+        // input - varying per vertex
+        attribute vec3 vertPosition; // x, y and z
         attribute vec3 vertColor;
+
+        // uniform stays the same for all vertices
+        uniform mat4 matrixWorld;
+        uniform mat4 matrixView;
+        uniform mat4 matrixProjection; 
 
         // output
         varying vec3 fragColor;
@@ -147,7 +185,9 @@ class App {
         void main(){
             fragColor = vertColor;
             // 0.0 = z-index, last one always 1
-            gl_Position = vec4(vertPosition, 0.0, 1.0);
+
+            // multiply from right
+            gl_Position = matrixProjection * matrixView * matrixWorld * vec4(vertPosition, 1.0);
         }
         `;
     }
